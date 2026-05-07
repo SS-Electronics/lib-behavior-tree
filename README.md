@@ -1,5 +1,14 @@
 # lib-behavior-tree
 
+[![CI](https://github.com/SS-Electronics/lib-behavior-tree/actions/workflows/ci.yml/badge.svg)](https://github.com/SS-Electronics/lib-behavior-tree/actions/workflows/ci.yml)
+[![GitHub Issues](https://img.shields.io/github/issues/SS-Electronics/lib-behavior-tree)](https://github.com/SS-Electronics/lib-behavior-tree/issues)
+[![GitHub Stars](https://img.shields.io/github/stars/SS-Electronics/lib-behavior-tree?style=flat)](https://github.com/SS-Electronics/lib-behavior-tree/stargazers)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Language: C](https://img.shields.io/badge/language-C99-00599C?logo=c)](https://en.wikipedia.org/wiki/C99)
+[![Standard](https://img.shields.io/badge/standard-C99-lightgrey)](https://en.wikipedia.org/wiki/C99)
+[![Platform](https://img.shields.io/badge/platform-bare--metal%20%7C%20FreeRTOS%20%7C%20POSIX-green)](https://github.com/SS-Electronics/lib-behavior-tree)
+[![Static Analysis](https://img.shields.io/badge/static%20analysis-cppcheck-orange)](https://cppcheck.sourceforge.io)
+
 Generic, thread-safe Behaviour Tree library for embedded C (C99).
 Supports bare-metal, FreeRTOS, and any POSIX-compatible RTOS.
 
