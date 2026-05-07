@@ -38,8 +38,9 @@
  * @brief Target platform identifier.
  *
  * Set to BT_PLATFORM_BARE, BT_PLATFORM_POSIX, or BT_PLATFORM_FREERTOS.
+ * If omitted, @c bt_port.h falls back to @c BT_PLATFORM_BARE.
  */
-#define BT_PLATFORM    BT_PLATFORM_POSIX
+/* #define BT_PLATFORM    BT_PLATFORM_POSIX */
 
 /* ===========================================================================
  *  Memory allocator overrides
@@ -81,9 +82,9 @@
  * @brief Initial capacity of the children pointer array per composite node.
  *
  * Tune to your tree's typical branching factor.
- * Minimum useful value: 2.  Default: 4.
+ * Minimum useful value: 2.  Default (if omitted): 4.
  */
-#define BT_CHILDREN_INITIAL_CAPACITY    4
+/* #define BT_CHILDREN_INITIAL_CAPACITY    4 */
 
 /* ===========================================================================
  *  Optional features
@@ -94,18 +95,18 @@
  *
  * When 1, each `bt_node_t` stores a @c const @c char* name pointer (one
  * pointer of overhead per node).  Set to 0 to strip names from production
- * builds and reduce per-node memory.
+ * builds and reduce per-node memory.  Default (if omitted): 1.
  */
-#define BT_ENABLE_NODE_NAMES    1
+/* #define BT_ENABLE_NODE_NAMES    1 */
 
 /**
  * @brief Enable per-tree tick statistics.
  *
  * When 1, @ref bt_tree_t gains @c tick_count (uint32_t) and
  * @c last_status (bt_status_t) fields updated on every @ref bt_tree_tick.
- * Useful for watchdog monitoring and performance profiling.
+ * Useful for watchdog monitoring and performance profiling.  Default: 1.
  */
-#define BT_ENABLE_STATS    1
+/* #define BT_ENABLE_STATS    1 */
 
 /** @} */ /* BT_CONFIG */
 

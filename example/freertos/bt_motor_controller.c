@@ -111,7 +111,7 @@ typedef struct {
 static bt_status_t cond_estop_clear(bt_node_t *node, void *ctx)
 {
     (void)node;
-    motor_ctx_t *m = (motor_ctx_t *)ctx;
+    const motor_ctx_t *m = (const motor_ctx_t *)ctx;
     if (m->estop_active) {
         printf("  [COND] E-stop ACTIVE — blocking normal operation\n");
         return BT_FAILURE;
@@ -125,7 +125,7 @@ static bt_status_t cond_estop_clear(bt_node_t *node, void *ctx)
 static bt_status_t cond_temp_ok(bt_node_t *node, void *ctx)
 {
     (void)node;
-    motor_ctx_t *m = (motor_ctx_t *)ctx;
+    const motor_ctx_t *m = (const motor_ctx_t *)ctx;
     if (m->temperature_c >= TEMP_LIMIT_C) {
         printf("  [COND] Over-temperature (%.1f °C) — blocking normal operation\n",
                m->temperature_c);
@@ -159,7 +159,7 @@ static bt_status_t action_enable_drive(bt_node_t *node, void *ctx)
 static void action_ramp_init(bt_node_t *node, void *ctx)
 {
     (void)node;
-    motor_ctx_t *m = (motor_ctx_t *)ctx;
+    const motor_ctx_t *m = (const motor_ctx_t *)ctx;
     printf("  [INIT] Speed ramp starting from %.0f RPM\n", m->speed_actual);
 }
 

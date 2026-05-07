@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # POSIX build — compile library as a shared object using the POSIX port
+  # ---------------------------------------------------------------------------
+  build-posix:
+    name: Build (POSIX)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile POSIX shared library
+        run: |
+          gcc -std=c99 -Wall -Wextra -Werror \
+              -D_POSIX_C_SOURCE=200809L \
+              -Ici/conf_posix -Iinc \
+              -fPIC -shared \
+              src/behavior_tree.c \
+              src/bt_composite.c \
+              src/bt_decorator.c \
+              src/bt_port_posix.c \
+              -lpthread \
+              -o libbt_posix.so
+
+  # ---------------------------------------------------------------------------
+  # FreeRTOS build — compile the simulation example (FreeRTOS API over pthreads)
+  # ---------------------------------------------------------------------------
+  build-freertos:
+    name: Build (FreeRTOS simulation)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile FreeRTOS motor-controller example
+        run: |
+          gcc -std=c99 -Wall -Wextra \
+              -D_POSIX_C_SOURCE=200809L \
+              -Iexample/freertos -Iinc \
+              src/behavior_tree.c \
+              src/bt_composite.c \
+              src/bt_decorator.c \
+              src/bt_port_freertos.c \
+              example/freertos/bt_motor_controller.c \
+              -lpthread \
+              -o motor_controller
+
+  # ---------------------------------------------------------------------------
+  # Doxygen — verify documentation generates without errors
+  # ---------------------------------------------------------------------------
+  doxygen:
+    name: Doxygen build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Doxygen
+        run: sudo apt-get install -y --no-install-recommends doxygen
+
+      - name: Generate HTML docs
+        run: doxygen Doxyfile
+
+      - name: Upload docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: doxygen-html
+          path: docs/
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # cppcheck — static analysis on library sources
+  # Two passes: once with POSIX config, once with FreeRTOS config.
+  # ---------------------------------------------------------------------------
+  cppcheck:
+    name: cppcheck static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cppcheck
+        run: sudo apt-get install -y --no-install-recommends cppcheck
+
+      - name: cppcheck — POSIX port
+        run: |
+          cppcheck \
+            --enable=warning,style,performance,portability \
+            --error-exitcode=1 \
+            --suppress=missingIncludeSystem \
+            --suppress=unusedFunction \
+            -Ici/conf_posix -Iinc \
+            src/behavior_tree.c \
+            src/bt_composite.c \
+            src/bt_decorator.c \
+            src/bt_port_posix.c
+
+      - name: cppcheck — FreeRTOS port + example
+        run: |
+          cppcheck \
+            --enable=warning,style,performance,portability \
+            --error-exitcode=1 \
+            --suppress=missingIncludeSystem \
+            --suppress=unusedFunction \
+            --suppress=constParameterCallback \
+            -Iexample/freertos -Iinc \
+            src/behavior_tree.c \
+            src/bt_composite.c \
+            src/bt_decorator.c \
+            src/bt_port_freertos.c \
+            example/freertos/bt_motor_controller.c
