@@ -1,28 +1,62 @@
 /**
- * @file  bt_composite.c
- * @brief Tick implementations for Sequence, Selector, and Parallel nodes.
+ * @file   bt_composite.c
+ * @brief  Tick implementations for Sequence, Selector, and Parallel nodes.
+ * @author Subhajit Roy <subhajitroy005@gmail.com>
  *
- * Sequence and Selector use a *stateful/memory* policy:
- *   - The index of the last RUNNING child is remembered.
- *   - On the next tick the composite resumes from that child instead of
- *     restarting from child 0.  This avoids re-executing completed actions.
+ * @ingroup BT_INTERNAL_TICKS
  *
- * Parallel uses a *per-cycle memory* policy:
- *   - All children are ticked every tick.
- *   - A child that already settled (SUCCESS or FAILURE) within the current
- *     parallel cycle is not re-ticked until the parallel starts a new cycle.
- *   - bt_parallel_on_init resets all children's settled state at the
- *     beginning of each new cycle.
+ * @details
+ * ## Sequence and Selector — stateful/memory policy
+ *
+ * Both use `bt_node_t::running_child` to remember which child was RUNNING
+ * on the previous tick.  On resume, iteration starts from that index rather
+ * than from child 0.  This means:
+ *
+ *  - Completed actions (SUCCESS) before the running child are not re-executed.
+ *  - If the parent forces a restart (halt then re-tick), `running_child` is
+ *    reset to 0 by @ref bt_node_halt.
+ *
+ * This policy is preferable for most embedded use-cases where action nodes
+ * carry ongoing work that must not be interrupted unnecessarily.
+ *
+ * ## Parallel — fully reactive policy
+ *
+ * Every child is ticked on every tree tick.  Children that returned a
+ * terminal status in a previous tick have `initialized = false`, so
+ * @ref bt_node_tick will call their `on_init_fn` again and re-execute them.
+ * This makes conditions re-evaluate on every tick and is the standard way
+ * to implement "monitoring" trees:
+ *
+ * @code
+ *   Parallel [threshold = N]
+ *   ├── Condition A   (re-evaluated every tick — reactive guard)
+ *   └── Action B      (continues across ticks while RUNNING)
+ * @endcode
+ *
+ * If Condition A fails on any tick, the Parallel immediately returns
+ * FAILURE and halts Action B.
  */
 #include "bt_internal.h"
 
 /* ===========================================================================
  *  Sequence  (→)
- *
- *  Returns SUCCESS  if every child returns SUCCESS.
- *  Returns FAILURE  on the first child that returns FAILURE.
- *  Returns RUNNING  if the currently executing child returns RUNNING.
  * ========================================================================= */
+
+/**
+ * @brief Tick implementation for Sequence nodes.
+ *
+ * Iterates children starting from `node->running_child`:
+ *  - BT_RUNNING  → record index, return BT_RUNNING.
+ *  - BT_FAILURE  → halt any earlier initialised siblings, reset index,
+ *                  return BT_FAILURE.
+ *  - BT_SUCCESS  → advance to the next child.
+ *
+ * All children succeeded → reset index, return BT_SUCCESS.
+ *
+ * @param[in,out] node  Sequence node being ticked.
+ * @param[in]     ctx   User context pointer.
+ * @return BT_SUCCESS, BT_FAILURE, BT_RUNNING, or BT_ERROR.
+ */
 bt_status_t bt_sequence_tick(bt_node_t *node, void *ctx)
 {
     for (uint16_t i = node->running_child; i < node->child_count; i++) {
@@ -34,7 +68,7 @@ bt_status_t bt_sequence_tick(bt_node_t *node, void *ctx)
             return BT_RUNNING;
 
         case BT_FAILURE:
-            /* Halt any siblings that might still be initialized */
+            /* Halt any initialised siblings that preceded the failing child */
             for (uint16_t j = 0; j < i; j++)
                 bt_node_halt(node->children[j], ctx);
             node->running_child = 0;
@@ -55,11 +89,22 @@ bt_status_t bt_sequence_tick(bt_node_t *node, void *ctx)
 
 /* ===========================================================================
  *  Selector  (?)
- *
- *  Returns SUCCESS  on the first child that returns SUCCESS.
- *  Returns FAILURE  if every child returns FAILURE.
- *  Returns RUNNING  if the currently executing child returns RUNNING.
  * ========================================================================= */
+
+/**
+ * @brief Tick implementation for Selector nodes.
+ *
+ * Iterates children starting from `node->running_child`:
+ *  - BT_RUNNING  → record index, return BT_RUNNING.
+ *  - BT_SUCCESS  → halt earlier siblings, reset index, return BT_SUCCESS.
+ *  - BT_FAILURE  → try the next child.
+ *
+ * All children failed → reset index, return BT_FAILURE.
+ *
+ * @param[in,out] node  Selector node being ticked.
+ * @param[in]     ctx   User context pointer.
+ * @return BT_SUCCESS, BT_FAILURE, BT_RUNNING, or BT_ERROR.
+ */
 bt_status_t bt_selector_tick(bt_node_t *node, void *ctx)
 {
     for (uint16_t i = node->running_child; i < node->child_count; i++) {
@@ -91,28 +136,26 @@ bt_status_t bt_selector_tick(bt_node_t *node, void *ctx)
 
 /* ===========================================================================
  *  Parallel
- *
- *  All children are ticked on every call.  Children that have already
- *  settled (SUCCESS or FAILURE) in this cycle are not re-ticked.
- *
- *  Returns SUCCESS  when successes >= success_threshold.
- *  Returns FAILURE  when remaining possible successes < success_threshold.
- *  Returns RUNNING  otherwise.
- *
- *  bt_parallel_on_init (called once per new cycle) resets per-cycle child
- *  state so that every child starts fresh at the beginning of each cycle.
  * ========================================================================= */
 
-void bt_parallel_on_init(bt_node_t *node, void *ctx)
-{
-    (void)ctx;
-    /* Mark all children as not-yet-settled for the new cycle */
-    for (uint16_t i = 0; i < node->child_count; i++) {
-        node->children[i]->status      = BT_INVALID;
-        node->children[i]->initialized = false;
-    }
-}
-
+/**
+ * @brief Tick implementation for Parallel nodes.
+ *
+ * Every child is ticked unconditionally on each call (fully reactive).
+ * Children that completed (SUCCESS or FAILURE) in a previous tick have
+ * `initialized = false`; @ref bt_node_tick will re-initialise and re-run
+ * them, making conditions re-evaluate every tick.
+ *
+ * Decision logic:
+ *  - success_count >= success_threshold → halt all children, return SUCCESS.
+ *  - (child_count − failure_count) < success_threshold → success impossible,
+ *    halt all children, return FAILURE.
+ *  - Otherwise → return RUNNING.
+ *
+ * @param[in,out] node  Parallel node being ticked.
+ * @param[in]     ctx   User context pointer.
+ * @return BT_SUCCESS, BT_FAILURE, or BT_RUNNING.
+ */
 bt_status_t bt_parallel_tick(bt_node_t *node, void *ctx)
 {
     uint16_t       success_count = 0;
@@ -121,16 +164,7 @@ bt_status_t bt_parallel_tick(bt_node_t *node, void *ctx)
     const uint16_t thresh        = node->success_threshold;
 
     for (uint16_t i = 0; i < n; i++) {
-        bt_node_t  *child = node->children[i];
-        bt_status_t s;
-
-        /* Re-use a settled result from this cycle rather than re-ticking */
-        if (child->status == BT_SUCCESS || child->status == BT_FAILURE) {
-            s = child->status;
-        } else {
-            s = bt_node_tick(child, ctx);
-        }
-
+        bt_status_t s = bt_node_tick(node->children[i], ctx);
         if      (s == BT_SUCCESS) success_count++;
         else if (s == BT_FAILURE) failure_count++;
     }

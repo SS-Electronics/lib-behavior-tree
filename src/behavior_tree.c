@@ -1,15 +1,41 @@
 /**
- * @file  behavior_tree.c
- * @brief Core: tree management, node creation, bt_node_tick/halt, utilities.
+ * @file   behavior_tree.c
+ * @brief  Core implementation: tree management, node lifecycle, and factory.
+ * @author Subhajit Roy <subhajitroy005@gmail.com>
+ *
+ * @ingroup BT_CORE
+ * @ingroup BT_FACTORY
+ * @ingroup BT_MANIP
+ * @ingroup BT_LOW
+ * @ingroup BT_UTIL
+ *
+ * @details
+ * This translation unit provides:
+ *  - `bt_node_tick` / `bt_node_halt` — the fundamental execution primitives.
+ *  - Factory functions for every node type (leaf, composite, decorator).
+ *  - `bt_node_add_child` and `bt_node_destroy` for tree construction.
+ *  - `bt_tree_create`, `bt_tree_tick`, `bt_tree_destroy` for tree lifetime.
+ *  - String utilities `bt_status_str` and `bt_node_type_str`.
+ *
+ * The tick functions for composites and decorators are declared in
+ * `bt_internal.h` and defined in `bt_composite.c` / `bt_decorator.c`.
  */
 #include "behavior_tree.h"
 #include "bt_internal.h"
 #include <string.h>
 
 /* ===========================================================================
- *  Internal helpers
+ *  Internal helper
  * ========================================================================= */
 
+/**
+ * @brief Allocate and zero-initialise a bt_node_t with common fields set.
+ *
+ * @param[in] type      Node type enum value.
+ * @param[in] name      Human-readable label (stored by pointer).
+ * @param[in] tick_fn   Tick callback to install.
+ * @return Pointer to initialised node, or NULL on allocation failure.
+ */
 static bt_node_t *node_alloc(bt_node_type_t type, const char *name,
                               bt_tick_fn_t tick_fn)
 {
@@ -29,14 +55,23 @@ static bt_node_t *node_alloc(bt_node_type_t type, const char *name,
 }
 
 /* ===========================================================================
- *  bt_node_tick / bt_node_halt
+ *  bt_node_tick
  * ========================================================================= */
 
+/**
+ * @brief Tick a single node (see behavior_tree.h for full documentation).
+ *
+ * Execution cycle per node:
+ *  1. If @c node->initialized is @c false: call @c on_init_fn (if set),
+ *     set @c initialized = @c true.
+ *  2. Call @c tick_fn and record the returned status.
+ *  3. If the status is terminal (SUCCESS or FAILURE), set
+ *     @c initialized = @c false so the next call restarts the cycle.
+ */
 bt_status_t bt_node_tick(bt_node_t *node, void *context)
 {
     if (!node || !node->tick_fn) return BT_ERROR;
 
-    /* Call on_init once per execution cycle */
     if (!node->initialized) {
         if (node->on_init_fn) node->on_init_fn(node, context);
         node->initialized = true;
@@ -45,17 +80,29 @@ bt_status_t bt_node_tick(bt_node_t *node, void *context)
     bt_status_t s = node->tick_fn(node, context);
     node->status  = s;
 
-    /* Reset so on_init fires again at the start of the next cycle */
     if (s != BT_RUNNING) node->initialized = false;
 
     return s;
 }
 
+/* ===========================================================================
+ *  bt_node_halt
+ * ========================================================================= */
+
+/**
+ * @brief Forcibly interrupt a node (see behavior_tree.h for full docs).
+ *
+ * Implementation notes:
+ *  - The function is a no-op when @c node->initialized is @c false because
+ *    a non-initialized node is not mid-cycle and needs no cleanup.
+ *  - Recursion propagates halt to all initialized descendants first, then
+ *    calls this node's @c on_halt_fn, matching the tear-down order that a
+ *    user would expect (leaves first, then their parents).
+ */
 void bt_node_halt(bt_node_t *node, void *context)
 {
     if (!node || !node->initialized) return;
 
-    /* Recursively halt all running descendants first */
     for (uint16_t i = 0; i < node->child_count; i++)
         bt_node_halt(node->children[i], context);
 
@@ -68,13 +115,14 @@ void bt_node_halt(bt_node_t *node, void *context)
 }
 
 /* ===========================================================================
- *  Node factory
+ *  Node factory — leaf nodes
  * ========================================================================= */
 
-bt_node_t *bt_action_create(const char *name, bt_tick_fn_t tick_fn,
+bt_node_t *bt_action_create(const char     *name,
+                             bt_tick_fn_t    tick_fn,
                              bt_on_init_fn_t on_init_fn,
                              bt_on_halt_fn_t on_halt_fn,
-                             void *user_data)
+                             void           *user_data)
 {
     bt_node_t *n = node_alloc(BT_NODE_ACTION, name, tick_fn);
     if (!n) return NULL;
@@ -84,14 +132,19 @@ bt_node_t *bt_action_create(const char *name, bt_tick_fn_t tick_fn,
     return n;
 }
 
-bt_node_t *bt_condition_create(const char *name, bt_tick_fn_t tick_fn,
-                                void *user_data)
+bt_node_t *bt_condition_create(const char   *name,
+                                bt_tick_fn_t  tick_fn,
+                                void         *user_data)
 {
     bt_node_t *n = node_alloc(BT_NODE_CONDITION, name, tick_fn);
     if (!n) return NULL;
     n->user_data = user_data;
     return n;
 }
+
+/* ===========================================================================
+ *  Node factory — composite nodes
+ * ========================================================================= */
 
 bt_node_t *bt_sequence_create(const char *name)
 {
@@ -108,9 +161,12 @@ bt_node_t *bt_parallel_create(const char *name, uint16_t success_threshold)
     bt_node_t *n = node_alloc(BT_NODE_PARALLEL, name, bt_parallel_tick);
     if (!n) return NULL;
     n->success_threshold = success_threshold;
-    n->on_init_fn        = bt_parallel_on_init;  /* resets per-cycle child state */
     return n;
 }
+
+/* ===========================================================================
+ *  Node factory — decorator nodes
+ * ========================================================================= */
 
 bt_node_t *bt_inverter_create(const char *name)
 {
@@ -144,9 +200,15 @@ bt_node_t *bt_force_failure_create(const char *name)
 }
 
 /* ===========================================================================
- *  bt_node_add_child / bt_node_destroy
+ *  bt_node_add_child
  * ========================================================================= */
 
+/**
+ * @brief Append a child node (see behavior_tree.h for full documentation).
+ *
+ * Growth strategy: capacity doubles on each reallocation, starting from
+ * @c BT_CHILDREN_INITIAL_CAPACITY.  The old array is freed after copying.
+ */
 bt_status_t bt_node_add_child(bt_node_t *parent, bt_node_t *child)
 {
     if (!parent || !child) return BT_ERROR;
@@ -174,6 +236,10 @@ bt_status_t bt_node_add_child(bt_node_t *parent, bt_node_t *child)
     return BT_SUCCESS;
 }
 
+/* ===========================================================================
+ *  bt_node_destroy
+ * ========================================================================= */
+
 void bt_node_destroy(bt_node_t *node)
 {
     if (!node) return;
@@ -184,7 +250,7 @@ void bt_node_destroy(bt_node_t *node)
 }
 
 /* ===========================================================================
- *  Tree
+ *  Tree API
  * ========================================================================= */
 
 bt_tree_t *bt_tree_create(bt_node_t *root, void *context, bool thread_safe)

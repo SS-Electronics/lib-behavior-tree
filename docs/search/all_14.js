@@ -1,0 +1,28 @@
+var searchData=
+[
+  ['safety_0',['Thread safety',['../behavior__tree_8h.html#thread_sec',1,'']]],
+  ['safety_20controller_1',['FreeRTOS example — motor safety controller',['../index.html#autotoc_md23',1,'']]],
+  ['safety_20model_2',['Thread safety model',['../index.html#autotoc_md12',1,'']]],
+  ['selector_20—_20stateful_20memory_20policy_3',['Sequence and Selector — stateful/memory policy',['../bt__composite_8c.html#autotoc_md0',1,'']]],
+  ['semaphorehandle_5ft_4',['SemaphoreHandle_t',['../freertos__sim_8h.html#acdd3940342c10296941c3a8803a7ff3f',1,'freertos_sim.h']]],
+  ['semphr_2eh_5',['semphr.h',['../semphr_8h.html',1,'']]],
+  ['sensor_5ftask_5fperiod_5fms_6',['SENSOR_TASK_PERIOD_MS',['../bt__motor__controller_8c.html#a378f322af10b979d7443344f1aeaccfe',1,'bt_motor_controller.c']]],
+  ['sequence_20and_20selector_20—_20stateful_20memory_20policy_7',['Sequence and Selector — stateful/memory policy',['../bt__composite_8c.html#autotoc_md0',1,'']]],
+  ['signatures_8',['Callback signatures',['../group__BT__CALLBACKS.html',1,'']]],
+  ['sim_5fduration_5fms_9',['SIM_DURATION_MS',['../bt__motor__controller_8c.html#a4b44aa5fad086ffdb783c7363aef13a2',1,'bt_motor_controller.c']]],
+  ['simulation_10',['Simulation',['../bt__motor__controller_8c.html#autotoc_md2',1,'']]],
+  ['speed_5factual_11',['speed_actual',['../structmotor__ctx__t.html#af9f5e999f3fa01d834aa46babb88d374',1,'motor_ctx_t']]],
+  ['speed_5fsetpoint_12',['speed_setpoint',['../structmotor__ctx__t.html#ac14bbd682aedb5493c4c1ae295dcd0c9',1,'motor_ctx_t']]],
+  ['speed_5ftarget_5frpm_13',['SPEED_TARGET_RPM',['../bt__motor__controller_8c.html#a6099e924a158754332ee5e6c82c59ee5',1,'bt_motor_controller.c']]],
+  ['stacktype_5ft_14',['StackType_t',['../freertos__sim_8h.html#ad17b57bae5e1714bb39e85cd2c3ac628',1,'freertos_sim.h']]],
+  ['start_15',['Quick-start',['../behavior__tree_8h.html#usage_sec',1,'']]],
+  ['start_20example_20posix_16',['Quick-start example (POSIX)',['../index.html#autotoc_md21',1,'']]],
+  ['stateful_20memory_20policy_17',['Sequence and Selector — stateful/memory policy',['../bt__composite_8c.html#autotoc_md0',1,'']]],
+  ['status_18',['status',['../structbt__node__t.html#a2925c774ad45d9d0b812fd95cf565b4a',1,'bt_node_t']]],
+  ['status_20values_19',['Status values',['../index.html#autotoc_md26',1,'']]],
+  ['step_201_20—_20copy_20the_20configuration_20file_20',['Step 1 — Copy the configuration file',['../index.html#autotoc_md17',1,'']]],
+  ['step_202_20—_20add_20to_20your_20build_21',['Step 2 — Add to your build',['../index.html#autotoc_md18',1,'']]],
+  ['step_203_20—_20include_20the_20public_20header_22',['Step 3 — Include the public header',['../index.html#autotoc_md19',1,'']]],
+  ['structure_23',['structure',['../group__BT__NODE.html',1,'Node structure'],['../behavior__tree_8h.html#tree_sec',1,'Tree structure'],['../group__BT__TREE.html',1,'Tree structure']]],
+  ['success_5fthreshold_24',['success_threshold',['../structbt__node__t.html#a2fd77ca3584c090d9d2331a841a6625c',1,'bt_node_t']]]
+];

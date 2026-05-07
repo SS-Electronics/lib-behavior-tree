@@ -1,0 +1,85 @@
+#---------------------------------------------------------------------------
+# Doxyfile — lib-behavior-tree documentation configuration
+# Run:  doxygen Doxyfile   (from the repository root)
+# Output: docs/index.html
+#---------------------------------------------------------------------------
+
+PROJECT_NAME           = "lib-behavior-tree"
+PROJECT_NUMBER         = "1.0.0"
+PROJECT_BRIEF          = "Generic, thread-safe Behaviour Tree library for embedded C"
+
+OUTPUT_DIRECTORY       = docs
+
+#---------------------------------------------------------------------------
+# Input
+#---------------------------------------------------------------------------
+INPUT                  = inc \
+                         src \
+                         example/freertos \
+                         README.md
+
+RECURSIVE              = YES
+FILE_PATTERNS          = *.c *.h *.md
+
+# Use README.md as the Doxygen main page
+USE_MDFILE_AS_MAINPAGE = README.md
+
+#---------------------------------------------------------------------------
+# C-specific settings
+#---------------------------------------------------------------------------
+OPTIMIZE_OUTPUT_FOR_C  = YES
+TYPEDEF_HIDES_STRUCT   = YES
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = YES
+EXTRACT_PRIVATE        = NO
+
+#---------------------------------------------------------------------------
+# Preprocessing — make conditional code visible to Doxygen
+#---------------------------------------------------------------------------
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = BT_ENABLE_NODE_NAMES=1 \
+                         BT_ENABLE_STATS=1 \
+                         BT_PLATFORM=1
+
+#---------------------------------------------------------------------------
+# HTML output
+#---------------------------------------------------------------------------
+GENERATE_HTML          = YES
+HTML_OUTPUT            = .
+HTML_FILE_EXTENSION    = .html
+HTML_DYNAMIC_SECTIONS  = YES
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
+
+#---------------------------------------------------------------------------
+# Disable formats we don't need
+#---------------------------------------------------------------------------
+GENERATE_LATEX         = NO
+GENERATE_MAN           = NO
+GENERATE_RTF           = NO
+GENERATE_XML           = NO
+
+#---------------------------------------------------------------------------
+# Source browser
+#---------------------------------------------------------------------------
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+
+#---------------------------------------------------------------------------
+# Diagrams — disable to remove graphviz dependency
+#---------------------------------------------------------------------------
+HAVE_DOT               = NO
+CLASS_GRAPH            = TEXT
+
+#---------------------------------------------------------------------------
+# Warnings
+#---------------------------------------------------------------------------
+WARN_IF_UNDOCUMENTED   = NO
+WARN_NO_PARAMDOC       = NO
+QUIET                  = YES
+WARNINGS               = YES
